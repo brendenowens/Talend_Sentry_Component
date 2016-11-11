@@ -1,0 +1,55 @@
+<%@ jet
+	imports="
+		org.talend.core.model.process.INode
+		org.talend.core.model.process.ElementParameterParser
+		org.talend.core.model.metadata.IMetadataTable
+		org.talend.core.model.metadata.IMetadataColumn
+		org.talend.core.model.process.IConnection
+		org.talend.core.model.process.IConnectionCategory
+		org.talend.designer.codegen.config.CodeGeneratorArgument
+		org.talend.core.model.metadata.types.JavaTypesManager
+		org.talend.core.model.metadata.types.JavaType
+		java.util.List
+    	java.util.Map
+        java.util.logging.Level
+        java.util.logging.Logger
+	"
+
+%>
+<%
+    CodeGeneratorArgument codeGenArgument = (CodeGeneratorArgument) argument;
+
+    INode node = (INode)codeGenArgument.getArgument();
+
+    String cid = node.getUniqueName();
+    String url = ElementParameterParser.getValue(node,"__URL__");
+    String message = ElementParameterParser.getValue(node, "__MESSAGE__");
+    boolean info = ElementParameterParser.getValue(node,"__INFO__").equals("true");
+    boolean warning = ElementParameterParser.getValue(node,"__WARNING__").equals("true");
+    boolean error = ElementParameterParser.getValue(node,"__ERROR__").equals("true");
+%>
+    com.getsentry.raven.Raven raven = com.getsentry.raven.RavenFactory.ravenInstance(<%=url%>);
+    //raven.sendMessage(<%= message %>);
+    //raven.closeConnection();
+    <%if(info) {%>
+            com.getsentry.raven.event.EventBuilder eventBuilder = new com.getsentry.raven.event.EventBuilder()
+                        .withMessage(<%= message %>)
+                        .withLevel(com.getsentry.raven.event.Event.Level.INFO);
+        raven.runBuilderHelpers(eventBuilder); // Optional
+        raven.sendEvent(eventBuilder.build());
+    <%}%>
+    <%else if (warning) { %>
+                    com.getsentry.raven.event.EventBuilder eventBuilder = new com.getsentry.raven.event.EventBuilder()
+                        .withMessage(<%= message %>)
+                        .withLevel(com.getsentry.raven.event.Event.Level.WARNING);
+        raven.runBuilderHelpers(eventBuilder); // Optional
+        raven.sendEvent(eventBuilder.build());
+    <%}%>
+    <%else {%>
+        com.getsentry.raven.event.EventBuilder eventBuilder = new com.getsentry.raven.event.EventBuilder()
+                        .withMessage(<%= message %>)
+                        .withLevel(com.getsentry.raven.event.Event.Level.ERROR);
+        raven.runBuilderHelpers(eventBuilder); // Optional
+        raven.sendEvent(eventBuilder.build());
+    <%}%>
+    raven.closeConnection();
